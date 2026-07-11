@@ -4,14 +4,15 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 @Data
+@Builder
+@NoArgsConstructor
 @AllArgsConstructor
 public class AuthResponse {
-    // 1. Agregamos el campo para el mensaje personalizado
     private String message;
-
-    @NotBlank(message = "Access token is required")
     private String accessToken;
-
-    @NotBlank(message = "Refresh token is required")
     private String refreshToken;
+    private Long userId;
+    private String username;
+    private String email;
+    private String role;
 }

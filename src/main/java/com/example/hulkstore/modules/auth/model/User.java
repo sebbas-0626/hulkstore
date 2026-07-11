@@ -1,6 +1,8 @@
 package com.example.hulkstore.modules.auth.model;
+
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -26,7 +28,9 @@ public class User {
 
     @Column(nullable = false)
     @Builder.Default
-    private boolean enabled = true;
+    private Boolean enabled = true;
+
+    private LocalDateTime lastLogin;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)

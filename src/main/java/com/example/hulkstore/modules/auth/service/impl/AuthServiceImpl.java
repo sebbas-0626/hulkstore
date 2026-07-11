@@ -13,9 +13,15 @@ import com.example.hulkstore.modules.auth.service.interfaces.IAuthService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -27,12 +33,12 @@ public class AuthServiceImpl implements IAuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
 
     @Override
     public AuthResponse register(RegisterUserDto dto) {
         log.info("Registering new user: {}", dto.getUsername());
 
-//        validar si el username ya existe
         if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
             log.warn("Username already exists: {}", dto.getUsername());
             throw new DuplicateUsernameException("Username already exists: " + dto.getUsername());
@@ -42,52 +48,83 @@ public class AuthServiceImpl implements IAuthService {
             throw new DuplicateEmailException("Email '" + dto.getEmail() + "' already registered");
         }
 
-//        obtener o crear el rol ROLE_USER
         Role roleUser = roleRepository.findByName("ROLE_USER").orElseGet(() -> {
             Role newRole = new Role();
             newRole.setName("ROLE_USER");
             return roleRepository.save(newRole);
         });
 
-//        crear el usuario y guardarlo en la base de datos, pasamos
         User user = new User();
         user.setUsername(dto.getUsername());
         user.setEmail(dto.getEmail());
-user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setRole(roleUser);
 
         User savedUser = userRepository.save(user);
         log.info("User registered successfully: {}", savedUser.getUsername());
 
-//        generar tokens JWT para el usuario registrado
-        String accessToken = jwtService.generateAccessToken(savedUser);
-        String refreshToken = jwtService.generateRefreshToken(savedUser);
-//retotnamos un objeto AuthResponse con un mensaje personalizado y los tokens generados
-        return new AuthResponse("User registered successfully", accessToken, refreshToken);
+        return AuthResponse.builder()
+                .message("User registered successfully")
+                .accessToken(jwtService.generateAccessToken(savedUser))
+                .refreshToken(jwtService.generateRefreshToken(savedUser))
+                .userId(savedUser.getId())
+                .username(savedUser.getUsername())
+                .email(savedUser.getEmail())
+                .role(savedUser.getRole().getName())
+                .build();
     }
 
     @Override
     public AuthResponse login(LoginUserDto dto) {
+        log.info("Login attempt for username: {}", dto.getUsername());
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(dto.getUsername(), dto.getPassword())
+            );
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        User user = userRepository.findByUsername(dto.getUsername()).orElseThrow(() -> new RuntimeException("Invalid credentials"));
+            User user = userRepository.findByUsername(dto.getUsername())
+                    .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
 
-        if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+            if (!user.getEnabled()) {
+                throw new AccountDisabledException("Account is disabled");
+            }
+
+            user.setLastLogin(LocalDateTime.now());
+            userRepository.save(user);
+
+            log.info("User logged in successfully: {}", user.getUsername());
+
+            return AuthResponse.builder()
+                    .message("Login successful")
+                    .accessToken(jwtService.generateAccessToken(user))
+                    .refreshToken(jwtService.generateRefreshToken(user))
+                    .userId(user.getId())
+                    .username(user.getUsername())
+                    .email(user.getEmail())
+                    .role(user.getRole().getName())
+                    .build();
+
+        } catch (BadCredentialsException e) {
+            log.warn("Invalid credentials for user: {}", dto.getUsername());
+            throw new InvalidCredentialsException("Invalid username or password");
         }
-
-        return new AuthResponse("Login successful", jwtService.generateAccessToken(user), jwtService.generateRefreshToken(user));
     }
 
     @Override
     public AuthResponse refreshToken(String refreshToken) {
-
         String username = jwtService.extractUsername(refreshToken);
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (!jwtService.isTokenValid(refreshToken, user)) {
-            throw new RuntimeException("Refresh token invalid");
+            throw new InvalidTokenException("Refresh token invalid");
         }
 
-        return new AuthResponse("Token refreshed successfully", jwtService.generateAccessToken(user), jwtService.generateRefreshToken(user));
+        return AuthResponse.builder()
+                .message("Token refreshed successfully")
+                .accessToken(jwtService.generateAccessToken(user))
+                .refreshToken(jwtService.generateRefreshToken(user))
+                .build();
     }
 }
