@@ -16,7 +16,7 @@ public class User {
     private String username;
 
     @Column(nullable = false)
-    private String passwordEncrypted;
+    private String password;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -24,11 +24,11 @@ public class User {
     @Column(length = 150)
     private String fullName;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean enabled = true;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
-
-    public void setEnabled(boolean b) {
-
-    }
 }

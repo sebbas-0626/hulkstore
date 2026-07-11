@@ -53,8 +53,7 @@ public class AuthServiceImpl implements IAuthService {
         User user = new User();
         user.setUsername(dto.getUsername());
         user.setEmail(dto.getEmail());
-        user.setPassword(passwordEncoder.encode(dto.getPassword()));
-        user.setEnabled(true);
+user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setRole(roleUser);
 
         User savedUser = userRepository.save(user);
@@ -68,7 +67,7 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     @Override
-    public AuthResponse login(@org.jetbrains.annotations.NotNull LoginUserDto dto) {
+    public AuthResponse login(LoginUserDto dto) {
 
         User user = userRepository.findByUsername(dto.getUsername()).orElseThrow(() -> new RuntimeException("Invalid credentials"));
 
