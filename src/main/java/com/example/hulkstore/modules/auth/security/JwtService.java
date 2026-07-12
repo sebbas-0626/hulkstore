@@ -1,8 +1,8 @@
 package com.example.hulkstore.modules.auth.security;
 
 import com.example.hulkstore.modules.auth.model.User;
+import org.springframework.security.core.userdetails.UserDetails;
 
-//interfaces jwt service
 public interface JwtService {
 
     String generateAccessToken(User user);
@@ -12,5 +12,7 @@ public interface JwtService {
     String extractUsername(String token);
 
     boolean isTokenValid(String token, User user);
+
+    boolean isTokenValid(String token, UserDetails userDetails);
 }
 
