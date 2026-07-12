@@ -21,5 +21,8 @@ public class Category {
     private Long id;
     private String name;
     private String description;
+    private String slug;
+    private Long parentId;
+    private boolean isActive;
 
 }

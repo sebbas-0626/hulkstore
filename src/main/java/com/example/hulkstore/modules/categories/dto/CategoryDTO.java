@@ -14,5 +14,9 @@ public class CategoryDTO {
     @NotBlank(message = "Name is obligatory")
     private String name;
     private String description;
+    private String slug;
+    private Long parentId;
+    private boolean isActive;
+
 }
 
