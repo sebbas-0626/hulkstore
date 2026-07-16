@@ -2,7 +2,9 @@ package com.example.hulkstore.modules.categories.controller;
 
 import com.example.hulkstore.modules.categories.dto.CategoryDTO;
 import com.example.hulkstore.modules.categories.service.ICategoryService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,11 +19,8 @@ public class CategoryController {
     private final ICategoryService service;
 
     @PostMapping
-    public ResponseEntity<CategoryDTO> create(@RequestBody CategoryDTO dto) {
-        CategoryDTO created = service.create(dto);
-        return ResponseEntity
-                .created(URI.create("/api/categories/" + created.getId()))
-                .body(created);
+    public ResponseEntity<CategoryDTO> create(@Valid @RequestBody CategoryDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(dto));
     }
 
     @PutMapping("/{id}")
